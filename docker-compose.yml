@@ -2,7 +2,8 @@ version: '3.5'
 
 services:
   crebito01: &crebito
-    build: .
+    # debug or prod
+    build: /${MODE}
     hostname: server01
     restart: always
     container_name: server01
@@ -10,19 +11,19 @@ services:
       - 8081:8080
 
     # TODO: Pull image to docker hub
-    # image: 
+    # image:
     # deploy:
     #   resources:
     #     limits:
     #       cpus: ""
     #       memory: ""
-    
+
   crebito02:
     <<: *crebito
     hostname: server02
     container_name: server02
     ports:
       - 8082:8080
-  
+
   # TODO: Nginx
   # TODO: DB
