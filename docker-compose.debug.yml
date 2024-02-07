@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  crebito-debug:
+    build:
+      context: .
+      dockerfile: ${ENV}.dockerfile
+    hostname: server-debug
+    container_name: server-debug
+    ports:
+      - 8081:8080
+    volumes:
+      - ./src:/src
+    restart: always
