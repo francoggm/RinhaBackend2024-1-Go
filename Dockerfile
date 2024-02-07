@@ -1,15 +1,19 @@
-FROM golang:1.21.0
+FROM golang:1.21.0-alpine AS builder
 
-WORKDIR /app
+WORKDIR /src
 
-COPY go.mod ./
+COPY ./src .
 
 RUN go mod download
 
-COPY *.go ./
+RUN GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o service
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o build/service
+FROM scratch
+
+WORKDIR /dist
+
+COPY --from=builder /src/service ./
 
 EXPOSE 8080 8080
 
-ENTRYPOINT ["build/service"]
+CMD ["./service"]
