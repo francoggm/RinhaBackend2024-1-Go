@@ -5,7 +5,7 @@ services:
     build:
       context: .
       # debug or prod
-      dockerfile: ${ENV}.dockerfile
+      dockerfile: ${MODE}.dockerfile
     hostname: server01
     container_name: server01
     ports:
