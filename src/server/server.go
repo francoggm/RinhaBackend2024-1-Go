@@ -1,8 +1,7 @@
 package server
 
 import (
-	extract "crebito/controllers/exctract"
-	"crebito/controllers/transaction"
+	"crebito/controllers/client"
 	"crebito/middlewares"
 	"net/http"
 
@@ -10,12 +9,9 @@ import (
 )
 
 func configureRoutes(r *gin.Engine) {
-	clients := r.Group("/clientes")
-	clients.Use(middlewares.Validate)
-	{
-		transaction.CreateRoutes(clients)
-		extract.CreateRoutes(clients)
-	}
+	c := r.Group("/clientes")
+	c.Use(middlewares.Validate)
+	client.CreateRoutes(c)
 
 	r.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, "Invalid route")
@@ -28,5 +24,5 @@ func Run(mode string, port string) error {
 
 	configureRoutes(r)
 
-	return r.Run(":" + port)
+	return r.Run("0.0.0.0:" + port)
 }

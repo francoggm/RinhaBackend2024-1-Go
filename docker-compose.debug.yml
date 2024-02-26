@@ -2,13 +2,12 @@ version: '3.8'
 
 services:
   crebito-debug:
+    ports:
+      - 8081:8080
     build:
       context: .
       dockerfile: ${MODE}.dockerfile
-    hostname: server-debug
     container_name: server-debug
-    ports:
-      - 8081:8080
     volumes:
       - ./src:/src
     depends_on:
@@ -16,22 +15,18 @@ services:
     env_file:
       - .env
     restart: always
-  
+
   neo:
     image: neo4j:latest
     ports: 
-        # http port
-        - 7474:7474
-        # bolt port (tcp)
-        - 7687:7687
+      - 7474:7474
+      - 7687:7687
     volumes:
-        - ./neo4j/data:/data/
-        - ./neo4j/config:/config/
+      - ./neo4j_data:/data/
     restart: on-failure
-    command: neo4j
-    container_name: database
     environment:
-        - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+      - NEO4J_AUTH=none 
+      # - NEO4J_AUTH=neo4j/password
   
 volumes:
-  dgraph:
+  neo4j_data:

@@ -13,6 +13,8 @@ services:
     volumes:
       - ./src:/src
     restart: always
+    env_file:
+      - .env
 
     # TODO: Pull image to docker hub
     # image:

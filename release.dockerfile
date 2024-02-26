@@ -14,6 +14,4 @@ WORKDIR /dist
 
 COPY --from=builder /src/service ./
 
-EXPOSE 8080 8080
-
 CMD ["./service"]
