@@ -75,11 +75,9 @@ func makeTransaction(ctx *gin.Context) {
 		return
 	}
 
-	var transactions []*database.Transaction
-
 	// last saved transaction is not in fact the last transaction, get transactions after last saved uuid and calculate cache
 	if transaction == nil {
-		transactions, err = database.DBClient.GetTransactionsAfterDate(client.UserID, client.LastTransactionDate)
+		transactions, err := database.DBClient.GetTransactionsAfterDate(client.UserID, client.LastTransactionDate)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -98,8 +96,7 @@ func makeTransaction(ctx *gin.Context) {
 		}
 	}
 
-	transactions = []*database.Transaction{transaction}
-	database.CalculateCache(id, transactions)
+	database.CalculateCache(id, []*database.Transaction{transaction})
 
 	ctx.JSON(http.StatusOK, transaction)
 }

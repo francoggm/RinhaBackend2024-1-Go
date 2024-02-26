@@ -78,64 +78,64 @@ func (c *clientNeo4j) GetTransactionsAfterDate(userId int64, date time.Time) ([]
 
 func fillTransactionRecord(record *db.Record) *Transaction {
 	m := record.AsMap()
-	transaction := new(Transaction)
+	t := new(Transaction)
 
 	id, ok := m["userId"]
 	if !ok {
 		return nil
 	}
-	transaction.UserID = id.(int64)
+	t.UserID = id.(int64)
 
 	uuid, ok := m["uuid"]
 	if !ok {
 		return nil
 	}
-	transaction.UUID = uuid.(string)
+	t.UUID = uuid.(string)
 
 	value, ok := m["valor"]
 	if !ok {
 		return nil
 	}
-	transaction.Value = value.(int64)
+	t.Value = value.(int64)
 
 	transactionType, ok := m["tipo"]
 	if !ok {
 		return nil
 	}
-	transaction.TransactionType = transactionType.(string)
+	t.TransactionType = transactionType.(string)
 
 	limit, ok := m["limite"]
 	if !ok {
 		return nil
 	}
-	transaction.Limit = limit.(int64)
+	t.Limit = limit.(int64)
 
 	description, ok := m["descricao"]
 	if !ok {
 		return nil
 	}
-	transaction.Description = description.(string)
+	t.Description = description.(string)
 
 	date, ok := m["date"]
 	if !ok {
 		return nil
 	}
-	transaction.Date = time.UnixMilli(date.(int64))
+	t.Date = time.UnixMilli(date.(int64))
 
-	return transaction
+	return t
 }
 
 // construct transaction struct with returned map
 func fillTransactions(records []*db.Record) []*Transaction {
-	var transactions = []*Transaction{}
+	var ts = []*Transaction{}
 
 	for _, record := range records {
-		transaction := fillTransactionRecord(record)
+		t := fillTransactionRecord(record)
 
-		if transaction != nil {
-			transactions = append(transactions, transaction)
+		if t != nil {
+			ts = append(ts, t)
 		}
 	}
 
-	return transactions
+	return ts
 }
