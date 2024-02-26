@@ -2,6 +2,7 @@ package client
 
 import (
 	"crebito/database"
+	"crebito/utils"
 	"net/http"
 	"strconv"
 
@@ -62,7 +63,7 @@ func makeTransaction(ctx *gin.Context) {
 	}
 
 	// invalid transaction because balance is lower than limit
-	if !canMakeTransaction(req, client) {
+	if !utils.CanMakeTransaction(req.Type, req.Value, client.Balance, client.Limit) {
 		ctx.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -99,8 +100,4 @@ func makeTransaction(ctx *gin.Context) {
 	database.CalculateCache(id, []*database.Transaction{transaction})
 
 	ctx.JSON(http.StatusOK, transaction)
-}
-
-func canMakeTransaction(transaction Transaction, client *database.ClientCache) bool {
-	return (transaction.Type == "c") || ((transaction.Type == "d") && (client.Balance-transaction.Value > -client.Limit))
 }
