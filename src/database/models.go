@@ -19,18 +19,35 @@ type client interface {
 }
 
 type Transaction struct {
-	Date            time.Time
-	Description     string
-	Value           int64
-	Limit           int64
-	TransactionType string
-	UserID          int64
-	UUID            string
+	Date            time.Time `json:"realizada_em"`
+	Description     string    `json:"descricao"`
+	Value           int64     `json:"valor"`
+	TransactionType string    `json:"tipo"`
+	Limit           int64     `json:"-"`
+	UserID          int64     `json:"-"`
+	UUID            string    `json:"-"`
 }
 
 type Extract struct {
+	Info struct {
+		Balance int64     `json:"total"`
+		Date    time.Time `json:"data_extrato"`
+		Limit   int64     `json:"limite"`
+	} `json:"saldo"`
+	Transactions []*Transaction `json:"ultimas_transacoes"`
 }
 
 type clientNeo4j struct {
 	DB neo4j.DriverWithContext
+}
+
+func NewExtract(balance int64, date time.Time, limit int64, transactions []*Transaction) Extract {
+	var extract Extract
+
+	extract.Info.Balance = balance
+	extract.Info.Date = date
+	extract.Info.Limit = limit
+	extract.Transactions = transactions
+
+	return extract
 }

@@ -5,6 +5,7 @@ import (
 	"crebito/utils"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,6 +22,56 @@ func CreateRoutes(c *gin.RouterGroup) {
 }
 
 func getExtract(ctx *gin.Context) {
+	param := ctx.Param("id")
+
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid id",
+		})
+		return
+	}
+
+	client, ok := database.GetClientInfoCache(id)
+	if !ok {
+		// cache doesnt exists, try to get user from db
+		transactions, err := database.DBClient.GetAllUserTransactions(id)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// user not found, dont have any transactions
+		if len(transactions) < 1 {
+			ctx.Status(http.StatusNotFound)
+			return
+		}
+
+		client := database.CalculateCache(id, transactions)
+
+		transactions, _ = database.GetClientTransactionsCache(id)
+		extract := database.NewExtract(client.Balance, time.Now(), client.Limit, transactions)
+
+		ctx.JSON(http.StatusOK, extract)
+		return
+	}
+
+	transactions, err := database.DBClient.GetTransactionsAfterDate(client.UserID, client.LastTransactionDate)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	client = database.CalculateCache(id, transactions)
+
+	transactions, _ = database.GetClientTransactionsCache(id)
+	extract := database.NewExtract(client.Balance, time.Now(), client.Limit, transactions)
+
+	ctx.JSON(http.StatusOK, extract)
 }
 
 func makeTransaction(ctx *gin.Context) {
@@ -43,7 +94,7 @@ func makeTransaction(ctx *gin.Context) {
 		return
 	}
 
-	client, ok := database.GetClientCache(id)
+	client, ok := database.GetClientInfoCache(id)
 	if !ok {
 		// cache doesnt exists, try to get user from db
 		transactions, err := database.DBClient.GetAllUserTransactions(id)
@@ -54,7 +105,7 @@ func makeTransaction(ctx *gin.Context) {
 			return
 		}
 
-		// user not found
+		// user not found, dont have any transactions
 		if len(transactions) < 1 {
 			ctx.Status(http.StatusNotFound)
 			return
@@ -62,7 +113,7 @@ func makeTransaction(ctx *gin.Context) {
 		client = database.CalculateCache(id, transactions)
 	}
 
-	// invalid transaction because balance is lower than limit
+	// false is invalid transaction because balance is lower than limit
 	if !utils.CanMakeTransaction(req.Type, req.Value, client.Balance, client.Limit) {
 		ctx.Status(http.StatusUnprocessableEntity)
 		return
@@ -76,7 +127,7 @@ func makeTransaction(ctx *gin.Context) {
 		return
 	}
 
-	// last saved transaction is not in fact the last transaction, get transactions after last saved uuid and calculate cache
+	// last saved transaction is not in fact the last transaction, get transactions after last date and calculate cache
 	if transaction == nil {
 		transactions, err := database.DBClient.GetTransactionsAfterDate(client.UserID, client.LastTransactionDate)
 		if err != nil {
