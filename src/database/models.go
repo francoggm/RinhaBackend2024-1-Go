@@ -11,6 +11,7 @@ import (
 
 type client interface {
 	GetExtract() ([]*Extract, error)
+	FindUser(userId int) bool
 	MakeTransaction(lastSavedUUID string, userId int, value int64, limit int64, transactionType string, description string) (*Transaction, error)
 	GetAllUserTransactions(userId int) ([]*Transaction, error)
 	GetTransactionsAfterDate(userId int64, date time.Time) ([]*Transaction, error)

@@ -48,19 +48,12 @@ func CalculateCache(id int, transactions []*Transaction) *ClientCache {
 }
 
 func saveTransactionsCache(id int, transactions []*Transaction) {
-	clientTransactions, ok := GetClientTransactionsCache(id)
-	if !ok {
-		if len(transactions) > 10 {
-			transactions = transactions[len(transactions)-10:]
-		}
+	clientTransactions, _ := GetClientTransactionsCache(id)
 
-		clientTransactionsCache[id] = transactions
-	} else {
-		clientTransactions = append(clientTransactions, transactions...)
-
-		if len(clientTransactions) > 10 {
-			clientTransactions = clientTransactions[len(clientTransactions)-10:]
-		}
-		clientTransactionsCache[id] = clientTransactions
+	clientTransactions = append(clientTransactions, transactions...)
+	if len(transactions) > 10 {
+		clientTransactions = transactions[len(transactions)-10:]
 	}
+
+	clientTransactionsCache[id] = clientTransactions
 }

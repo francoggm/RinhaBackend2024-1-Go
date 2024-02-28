@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Transaction struct {
+type TransactionBody struct {
 	Value       int64  `json:"valor" binding:"required"`
 	Type        string `json:"tipo" binding:"required"`
 	Description string `json:"descricao" binding:"required"`
@@ -34,18 +34,18 @@ func getExtract(ctx *gin.Context) {
 
 	client, ok := database.GetClientInfoCache(id)
 	if !ok {
+		// user not found
+		if !database.DBClient.FindUser(id) {
+			ctx.Status(http.StatusNotFound)
+			return
+		}
+
 		// cache doesnt exists, try to get user from db
 		transactions, err := database.DBClient.GetAllUserTransactions(id)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
-			return
-		}
-
-		// user not found, dont have any transactions
-		if len(transactions) < 1 {
-			ctx.Status(http.StatusNotFound)
 			return
 		}
 
@@ -66,7 +66,9 @@ func getExtract(ctx *gin.Context) {
 		return
 	}
 
-	client = database.CalculateCache(id, transactions)
+	if len(transactions) > 0 {
+		client = database.CalculateCache(id, transactions)
+	}
 
 	transactions, _ = database.GetClientTransactionsCache(id)
 	extract := database.NewExtract(client.Balance, time.Now(), client.Limit, transactions)
@@ -85,7 +87,7 @@ func makeTransaction(ctx *gin.Context) {
 		return
 	}
 
-	var req Transaction
+	var req TransactionBody
 
 	if err = ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -96,7 +98,13 @@ func makeTransaction(ctx *gin.Context) {
 
 	client, ok := database.GetClientInfoCache(id)
 	if !ok {
-		// cache doesnt exists, try to get user from db
+		// user not found
+		if !database.DBClient.FindUser(id) {
+			ctx.Status(http.StatusNotFound)
+			return
+		}
+
+		// cache doesnt exists
 		transactions, err := database.DBClient.GetAllUserTransactions(id)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -105,11 +113,6 @@ func makeTransaction(ctx *gin.Context) {
 			return
 		}
 
-		// user not found, dont have any transactions
-		if len(transactions) < 1 {
-			ctx.Status(http.StatusNotFound)
-			return
-		}
 		client = database.CalculateCache(id, transactions)
 	}
 

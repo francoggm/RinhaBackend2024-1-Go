@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
@@ -18,6 +19,23 @@ func (c *clientNeo4j) VerifyConnectivity(ctx context.Context) error {
 
 func (c *clientNeo4j) GetExtract() ([]*Extract, error) {
 	return nil, nil
+}
+
+func (c *clientNeo4j) FindUser(userId int) bool {
+	query := `MATCH (t:Transaction {userId: $userId}) 
+						RETURN t.userId as userId
+						LIMIT 1`
+
+	result, _ := neo4j.ExecuteQuery(DBContext, c.DB, query, map[string]any{"userId": userId}, neo4j.EagerResultTransformer, neo4j.ExecuteQueryWithDatabase("neo4j"))
+
+	for _, record := range result.Records {
+		_, ok := record.AsMap()["userId"]
+		if ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *clientNeo4j) MakeTransaction(lastSavedUUID string, userId int, value int64, limit int64, transactionType string, description string) (*Transaction, error) {
@@ -52,7 +70,9 @@ func (c *clientNeo4j) MakeTransaction(lastSavedUUID string, userId int, value in
 }
 
 func (c *clientNeo4j) GetAllUserTransactions(userId int) ([]*Transaction, error) {
+	// first transaction is to create user
 	query := `MATCH (t:Transaction {userId: $userId}) 
+						WHERE t.valor > 0
 	          RETURN t.userId as userId, t.uuid as uuid, t.valor as valor, t.tipo as tipo, t.limite as limite, t.descricao as descricao, t.date as date`
 
 	result, err := neo4j.ExecuteQuery(DBContext, c.DB, query, map[string]any{"userId": userId}, neo4j.EagerResultTransformer, neo4j.ExecuteQueryWithDatabase("neo4j"))
@@ -74,6 +94,21 @@ func (c *clientNeo4j) GetTransactionsAfterDate(userId int64, date time.Time) ([]
 	}
 
 	return fillTransactions(result.Records), nil
+}
+
+// construct transaction struct with returned map
+func fillTransactions(records []*db.Record) []*Transaction {
+	var ts = []*Transaction{}
+
+	for _, record := range records {
+		t := fillTransactionRecord(record)
+
+		if t != nil {
+			ts = append(ts, t)
+		}
+	}
+
+	return ts
 }
 
 func fillTransactionRecord(record *db.Record) *Transaction {
@@ -122,20 +157,7 @@ func fillTransactionRecord(record *db.Record) *Transaction {
 	}
 	t.Date = time.UnixMilli(date.(int64))
 
+	log.Println("transaction date=", date, "transaction value=", value)
+
 	return t
-}
-
-// construct transaction struct with returned map
-func fillTransactions(records []*db.Record) []*Transaction {
-	var ts = []*Transaction{}
-
-	for _, record := range records {
-		t := fillTransactionRecord(record)
-
-		if t != nil {
-			ts = append(ts, t)
-		}
-	}
-
-	return ts
 }
