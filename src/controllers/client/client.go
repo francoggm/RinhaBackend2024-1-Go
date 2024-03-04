@@ -84,6 +84,11 @@ func makeTransaction(ctx *gin.Context) {
 		return
 	}
 
+	// removing money
+	if req.Type == "d" {
+		req.Value = -req.Value
+	}
+
 	transaction := database.DBClient.MakeTransaction(client.LastTransactionUUID, id, req.Value, req.Type, req.Description)
 
 	// last saved transaction is not in fact the last transaction, get transactions after last date and calculate cache
@@ -98,6 +103,11 @@ func makeTransaction(ctx *gin.Context) {
 	}
 
 	database.CalculateCache(id, transaction)
+
+	// debito transaction have negative value
+	if req.Type == "d" {
+		transaction.Value = -transaction.Value
+	}
 
 	ctx.JSON(http.StatusOK, transaction)
 }

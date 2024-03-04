@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
@@ -22,7 +23,7 @@ func (c *clientNeo4j) GetClientInfo(userId int64) *ClientInfo {
 						OPTIONAL MATCH (ts:Transaction)
 						WHERE ts.userId = t.userId AND ts.date > t.date
 						
-						RETURN t.userId as userId, t.limite as limite, sum(ts.valor) as balance, t.uuid as lastUUID, collect({uuid: ts.uuid, userId: ts.userId, date: ts.date, descricao: ts.descricao, tipo: ts.tipo, valor: ts.valor})[-10..] as transactions`
+						RETURN t.userId as userId, t.limite as limite, sum(ts.valor) as balance, t.uuid as lastUUID, collect({uuid: ts.uuid, userId: ts.userId, date: ts.date, descricao: ts.descricao, tipo: ts.tipo, valor: abs(ts.valor)})[-10..] as transactions`
 
 	result, _ := neo4j.ExecuteQuery(context.Background(), c.DB, query, map[string]any{"userId": userId}, neo4j.EagerResultTransformer, neo4j.ExecuteQueryWithDatabase("neo4j"))
 
@@ -162,6 +163,8 @@ func fillTransactionRecord(record map[string]any) *Transaction {
 		return nil
 	}
 	t.Date = time.UnixMilli(date.(int64))
+
+	log.Println("value=", t.Value)
 
 	return &t
 }

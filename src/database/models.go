@@ -62,7 +62,7 @@ func NewExtract(balance int64, date time.Time, limit int64, transactions []*Tran
 }
 
 func (ci *ClientInfo) SetLastTransaction(transaction *Transaction) {
-	ci.Balance -= transaction.Value
+	ci.Balance += transaction.Value
 	ci.LastTransactionUUID = transaction.UUID
 
 	ci.LastTransactions = append(ci.LastTransactions, transaction)
