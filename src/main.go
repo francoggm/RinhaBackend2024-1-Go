@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crebito/config"
 	"crebito/database"
 	"crebito/server"
@@ -14,10 +15,10 @@ func main() {
 	if err := database.InitDatabase(cfg.URI, cfg.DBUsername, cfg.DBPassword); err != nil {
 		log.Panicf("error connecting database : error=%v", err)
 	}
-	defer database.DBClient.CloseDB(database.DBContext)
+	defer database.DBClient.CloseDB(context.Background())
 
 	for {
-		if err := database.DBClient.VerifyConnectivity(database.DBContext); err != nil {
+		if err := database.DBClient.VerifyConnectivity(context.Background()); err != nil {
 			log.Printf("error in database connectivity : error=%v\n", err)
 			time.Sleep(2 * time.Second)
 		} else {

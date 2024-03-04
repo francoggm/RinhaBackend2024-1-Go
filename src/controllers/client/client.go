@@ -24,7 +24,7 @@ func CreateRoutes(c *gin.RouterGroup) {
 func getExtract(ctx *gin.Context) {
 	param := ctx.Param("id")
 
-	id, err := strconv.Atoi(param)
+	id, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid id",
@@ -34,44 +34,16 @@ func getExtract(ctx *gin.Context) {
 
 	client, ok := database.GetClientInfoCache(id)
 	if !ok {
-		// user not found
-		if !database.DBClient.FindUser(id) {
+		client = getClientInfoAndCache(id)
+		if client == nil {
 			ctx.Status(http.StatusNotFound)
 			return
 		}
-
-		// cache doesnt exists, try to get user from db
-		transactions, err := database.DBClient.GetAllUserTransactions(id)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		client := database.CalculateCache(id, transactions)
-
-		transactions, _ = database.GetClientTransactionsCache(id)
-		extract := database.NewExtract(client.Balance, time.Now(), client.Limit, transactions)
-
-		ctx.JSON(http.StatusOK, extract)
-		return
+	} else if !database.DBClient.IsLastTransactionUUID(client.LastTransactionUUID) {
+		getClientInfoAndCache(id)
 	}
 
-	transactions, err := database.DBClient.GetTransactionsAfterDate(client.UserID, client.LastTransactionDate)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	if len(transactions) > 0 {
-		client = database.CalculateCache(id, transactions)
-	}
-
-	transactions, _ = database.GetClientTransactionsCache(id)
-	extract := database.NewExtract(client.Balance, time.Now(), client.Limit, transactions)
+	extract := database.NewExtract(client.Balance, time.Now(), client.Limit, client.LastTransactions)
 
 	ctx.JSON(http.StatusOK, extract)
 }
@@ -79,7 +51,7 @@ func getExtract(ctx *gin.Context) {
 func makeTransaction(ctx *gin.Context) {
 	param := ctx.Param("id")
 
-	id, err := strconv.Atoi(param)
+	id, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid id",
@@ -99,21 +71,11 @@ func makeTransaction(ctx *gin.Context) {
 	client, ok := database.GetClientInfoCache(id)
 	if !ok {
 		// user not found
-		if !database.DBClient.FindUser(id) {
+		client = getClientInfoAndCache(id)
+		if client == nil {
 			ctx.Status(http.StatusNotFound)
 			return
 		}
-
-		// cache doesnt exists
-		transactions, err := database.DBClient.GetAllUserTransactions(id)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		client = database.CalculateCache(id, transactions)
 	}
 
 	// false is invalid transaction because balance is lower than limit
@@ -122,36 +84,30 @@ func makeTransaction(ctx *gin.Context) {
 		return
 	}
 
-	transaction, err := database.DBClient.MakeTransaction(client.LastTransactionUUID, id, req.Value, client.Limit, req.Type, req.Description)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
+	transaction := database.DBClient.MakeTransaction(client.LastTransactionUUID, id, req.Value, req.Type, req.Description)
 
 	// last saved transaction is not in fact the last transaction, get transactions after last date and calculate cache
 	if transaction == nil {
-		transactions, err := database.DBClient.GetTransactionsAfterDate(client.UserID, client.LastTransactionDate)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
+		client = getClientInfoAndCache(id)
+		if client == nil {
+			ctx.Status(http.StatusNotFound)
 			return
 		}
 
-		client = database.CalculateCache(id, transactions)
-
-		transaction, err = database.DBClient.MakeTransaction(client.LastTransactionUUID, id, req.Value, client.Limit, req.Type, req.Description)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
+		transaction = database.DBClient.MakeTransaction(client.LastTransactionUUID, id, req.Value, req.Type, req.Description)
 	}
 
-	database.CalculateCache(id, []*database.Transaction{transaction})
+	database.CalculateCache(id, transaction)
 
 	ctx.JSON(http.StatusOK, transaction)
+}
+
+func getClientInfoAndCache(id int64) *database.ClientInfo {
+	client := database.DBClient.GetClientInfo(id)
+	if client == nil {
+		return nil
+	}
+
+	database.SetClientInfoCache(client)
+	return client
 }

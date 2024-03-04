@@ -1,14 +1,11 @@
 package database
 
 import (
-	"context"
-
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 var (
-	DBContext context.Context
-	DBClient  client
+	DBClient client
 )
 
 func InitDatabase(uri string, username string, password string) error {
@@ -16,8 +13,6 @@ func InitDatabase(uri string, username string, password string) error {
 	if err != nil {
 		return err
 	}
-
-	DBContext = context.Background()
 
 	DBClient = &clientNeo4j{
 		DB: conn,

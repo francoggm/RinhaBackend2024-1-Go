@@ -5,18 +5,25 @@ import (
 	"time"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"golang.org/x/exp/slices"
 )
 
 // This implementation allows you to use multiple databases by creating a new client
 
 type client interface {
-	GetExtract() ([]*Extract, error)
-	FindUser(userId int) bool
-	MakeTransaction(lastSavedUUID string, userId int, value int64, limit int64, transactionType string, description string) (*Transaction, error)
-	GetAllUserTransactions(userId int) ([]*Transaction, error)
-	GetTransactionsAfterDate(userId int64, date time.Time) ([]*Transaction, error)
+	GetClientInfo(userId int64) *ClientInfo
+	MakeTransaction(lastSavedUUID string, userId int64, value int64, transactionType string, description string) *Transaction
+	IsLastTransactionUUID(uuid string) bool
 	VerifyConnectivity(ctx context.Context) error
 	CloseDB(ctx context.Context) error
+}
+
+type ClientInfo struct {
+	UserID              int64
+	Balance             int64
+	Limit               int64
+	LastTransactionUUID string
+	LastTransactions    []*Transaction
 }
 
 type Transaction struct {
@@ -24,7 +31,6 @@ type Transaction struct {
 	Description     string    `json:"descricao"`
 	Value           int64     `json:"valor"`
 	TransactionType string    `json:"tipo"`
-	Limit           int64     `json:"-"`
 	UserID          int64     `json:"-"`
 	UUID            string    `json:"-"`
 }
@@ -48,7 +54,19 @@ func NewExtract(balance int64, date time.Time, limit int64, transactions []*Tran
 	extract.Info.Balance = balance
 	extract.Info.Date = date
 	extract.Info.Limit = limit
-	extract.Transactions = transactions
+	extract.Transactions = slices.Clone(transactions)
+
+	slices.Reverse(extract.Transactions)
 
 	return extract
+}
+
+func (ci *ClientInfo) SetLastTransaction(transaction *Transaction) {
+	ci.Balance -= transaction.Value
+	ci.LastTransactionUUID = transaction.UUID
+
+	ci.LastTransactions = append(ci.LastTransactions, transaction)
+	if len(ci.LastTransactions) > 10 {
+		ci.LastTransactions = ci.LastTransactions[len(ci.LastTransactions)-10:]
+	}
 }
