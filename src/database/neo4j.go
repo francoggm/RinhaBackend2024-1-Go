@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
@@ -163,8 +162,6 @@ func fillTransactionRecord(record map[string]any) *Transaction {
 		return nil
 	}
 	t.Date = time.UnixMilli(date.(int64))
-
-	log.Println("value=", t.Value)
 
 	return &t
 }

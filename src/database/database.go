@@ -1,15 +1,15 @@
 package database
 
 import (
+	"fmt"
+
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
-var (
-	DBClient client
-)
+var DBClient client
 
-func InitDatabase(uri string, username string, password string) error {
-	conn, err := neo4j.NewDriverWithContext(uri, neo4j.NoAuth())
+func InitDatabase(db string) error {
+	conn, err := neo4j.NewDriverWithContext(fmt.Sprintf("bolt://%s:7687", db), neo4j.BasicAuth("neo4j", "password", ""))
 	if err != nil {
 		return err
 	}

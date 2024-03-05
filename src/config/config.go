@@ -5,9 +5,7 @@ import "os"
 type Config struct {
 	Mode       string
 	Port       string
-	URI        string
-	DBUsername string
-	DBPassword string
+	DBHostname string
 }
 
 var cfg *Config
@@ -17,9 +15,7 @@ func init() {
 
 	cfg.Mode = os.Getenv("MODE")
 	cfg.Port = os.Getenv("PORT")
-	cfg.URI = os.Getenv("URI")
-	cfg.DBUsername = os.Getenv("NEO4J_USERNAME")
-	cfg.DBPassword = os.Getenv("NEO4J_PASSWORD")
+	cfg.DBHostname = os.Getenv("DB_HOSTNAME")
 }
 
 func New() *Config {

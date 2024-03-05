@@ -2,7 +2,6 @@ package server
 
 import (
 	"crebito/controllers/client"
-	"crebito/middlewares"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,7 +9,6 @@ import (
 
 func configureRoutes(r *gin.Engine) {
 	c := r.Group("/clientes")
-	c.Use(middlewares.Validate)
 	client.CreateRoutes(c)
 
 	r.NoRoute(func(ctx *gin.Context) {
