@@ -9,15 +9,16 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 func HandleTransaction(w http.ResponseWriter, r *http.Request, s neo4j.SessionWithContext) {
 	defer r.Body.Close()
 
-	idParam := r.URL.Query().Get("id")
+	vars := mux.Vars(r)
 
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return

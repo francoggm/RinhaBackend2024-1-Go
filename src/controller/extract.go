@@ -10,24 +10,23 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 func HandleExtract(w http.ResponseWriter, r *http.Request, s neo4j.SessionWithContext) {
 	defer r.Body.Close()
 
-	idParam := r.URL.Query().Get("id")
+	vars := mux.Vars(r)
 
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{}`))
 		return
 	}
 
 	if id < 1 || id > 5 {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{}`))
 		return
 	}
 
@@ -81,11 +80,12 @@ func HandleExtract(w http.ResponseWriter, r *http.Request, s neo4j.SessionWithCo
 			w.WriteHeader(http.StatusUnprocessableEntity)
 		}
 
-		w.Write([]byte(`{}`))
 		return
 	}
 
 	res, _ := json.Marshal(result)
+
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(res)
 }
