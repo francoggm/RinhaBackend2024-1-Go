@@ -1,7 +1,7 @@
 package server
 
 import (
-	"crebito/controllers/client"
+	"crebito/controller"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,7 +9,8 @@ import (
 
 func configureRoutes(r *gin.Engine) {
 	c := r.Group("/clientes")
-	client.CreateRoutes(c)
+	c.GET("/:id/extrato", controller.GetExtract)
+	c.POST("/:id/transacoes", controller.MakeTransaction)
 
 	r.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, "Invalid route")
