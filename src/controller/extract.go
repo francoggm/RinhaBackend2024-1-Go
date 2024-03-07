@@ -3,47 +3,37 @@ package controller
 import (
 	"context"
 	"crebito/database"
+	"crebito/models"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
-type Transaction struct {
-	Value       int64     `json:"valor"`
-	Type        string    `json:"tipo"`
-	Description string    `json:"descricao"`
-	Date        time.Time `json:"realizada_em"`
-}
+func HandleExtract(w http.ResponseWriter, r *http.Request, s neo4j.SessionWithContext) {
+	defer r.Body.Close()
 
-type Info struct {
-	Balance int64     `json:"total"`
-	Limit   int64     `json:"limite"`
-	Date    time.Time `json:"data_extrato"`
-}
+	idParam := r.URL.Query().Get("id")
 
-type ExtractResponse struct {
-	UserInfo     Info          `json:"saldo"`
-	Transactions []Transaction `json:"ultimas_transacoes"`
-}
-
-func GetExtract(ctx *gin.Context) {
-	param := ctx.Param("id")
-
-	id, err := strconv.Atoi(param)
+	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid id",
-		})
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{}`))
+		return
+	}
+
+	if id < 1 || id > 5 {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{}`))
 		return
 	}
 
 	c := context.Background()
 
-	result, err := database.DB.ExtractSession.ExecuteRead(c,
+	result, err := s.ExecuteRead(c,
 		func(tx neo4j.ManagedTransaction) (any, error) {
 			result, err := tx.Run(c, database.ExtractQuery,
 				map[string]any{
@@ -55,10 +45,10 @@ func GetExtract(ctx *gin.Context) {
 
 			record, err := result.Single(c)
 			if err != nil {
-				return nil, errUserNotFound
+				return nil, models.ErrUserNotFound
 			}
 
-			var res ExtractResponse
+			var res models.ExtractResponse
 
 			res.UserInfo.Balance = record.AsMap()["saldo"].(int64)
 			res.UserInfo.Limit = record.AsMap()["limite"].(int64)
@@ -66,7 +56,7 @@ func GetExtract(ctx *gin.Context) {
 
 			values := record.AsMap()["transacoes"].([]any)
 			for _, v := range values {
-				var t Transaction
+				var t models.Transaction
 
 				transaction := v.(map[string]any)
 
@@ -85,14 +75,17 @@ func GetExtract(ctx *gin.Context) {
 
 	if err != nil {
 		switch {
-		case errors.Is(err, errUserNotFound):
-			ctx.Status(http.StatusNotFound)
+		case errors.Is(err, models.ErrUserNotFound):
+			w.WriteHeader(http.StatusNotFound)
 		default:
-			ctx.Status(http.StatusUnprocessableEntity)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 		}
 
+		w.Write([]byte(`{}`))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, result)
+	res, _ := json.Marshal(result)
+	w.WriteHeader(http.StatusOK)
+	w.Write(res)
 }

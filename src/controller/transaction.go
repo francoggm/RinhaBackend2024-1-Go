@@ -3,47 +3,40 @@ package controller
 import (
 	"context"
 	"crebito/database"
+	"crebito/models"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
-type TransactionRequest struct {
-	Value       int64  `json:"valor" binding:"required"`
-	Type        string `json:"tipo" binding:"required"`
-	Description string `json:"descricao" binding:"required"`
-}
+func HandleTransaction(w http.ResponseWriter, r *http.Request, s neo4j.SessionWithContext) {
+	defer r.Body.Close()
 
-type TransactionResponse struct {
-	Balance int64 `json:"saldo"`
-	Limit   int64 `json:"limite"`
-}
+	idParam := r.URL.Query().Get("id")
 
-var (
-	errUserNotFound      = errors.New("user not found")
-	errInsufficientLimit = errors.New("insufficient limit")
-)
-
-func MakeTransaction(ctx *gin.Context) {
-	param := ctx.Param("id")
-
-	id, err := strconv.Atoi(param)
+	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid id",
-		})
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	var req TransactionRequest
+	if id < 1 || id > 5 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
-	if err = ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid fields",
-		})
+	var req models.TransactionRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
+
+	if req.Value < 1 || (req.Type != "d" && req.Type != "c") || (len(req.Description) < 1 || len(req.Description) > 10) {
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -51,11 +44,11 @@ func MakeTransaction(ctx *gin.Context) {
 		req.Value = -1 * req.Value
 	}
 
-	c := context.Background()
+	ctx := context.Background()
 
-	result, err := database.DB.TransactionSession.ExecuteWrite(c,
+	result, err := s.ExecuteWrite(ctx,
 		func(tx neo4j.ManagedTransaction) (any, error) {
-			result, err := tx.Run(c, database.TransactionQuery,
+			result, err := tx.Run(ctx, database.TransactionQuery,
 				map[string]any{
 					"id":        id,
 					"tipo":      req.Type,
@@ -68,14 +61,14 @@ func MakeTransaction(ctx *gin.Context) {
 
 			record, err := result.Single(ctx)
 			if err != nil {
-				return nil, errUserNotFound
+				return nil, models.ErrUserNotFound
 			}
 
 			if record.AsMap()["transacao"] == nil {
-				return nil, errInsufficientLimit
+				return nil, models.ErrInsufficientLimit
 			}
 
-			var res TransactionResponse
+			var res models.TransactionResponse
 
 			res.Balance = record.AsMap()["saldo"].(int64)
 			res.Limit = record.AsMap()["limite"].(int64)
@@ -85,14 +78,16 @@ func MakeTransaction(ctx *gin.Context) {
 
 	if err != nil {
 		switch {
-		case errors.Is(err, errUserNotFound):
-			ctx.Status(http.StatusNotFound)
+		case errors.Is(err, models.ErrUserNotFound):
+			w.WriteHeader(http.StatusNotFound)
 		default:
-			ctx.Status(http.StatusUnprocessableEntity)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 		}
 
 		return
 	}
 
-	ctx.JSON(http.StatusOK, result)
+	res, _ := json.Marshal(result)
+	w.WriteHeader(http.StatusOK)
+	w.Write(res)
 }

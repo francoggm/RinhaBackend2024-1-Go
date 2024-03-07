@@ -1,13 +1,12 @@
 package database
 
 const ExtractQuery = `
-		MATCH (u:Usuario {id: $id})-[:REALIZOU]->(t)
-		WITH u, t
-		ORDER BY t.date DESC LIMIT 10
+	MATCH (u:Usuario {id: $id})-[:REALIZOU]->(t)
+	WITH u, t
+	ORDER BY t.date DESC LIMIT 10
 
-		WITH u, collect({tipo: t.tipo, valor: abs(t.valor), descricao: t.descricao, data: t.data}) AS transacoes
-		RETURN u.saldo AS saldo, u.limite AS limite, transacoes
-	`
+	WITH u, collect({tipo: t.tipo, valor: abs(t.valor), descricao: t.descricao, data: t.data}) AS transacoes
+	RETURN u.saldo AS saldo, u.limite AS limite, transacoes`
 
 const TransactionQuery = `
 	MATCH (u:Usuario {id: $id})
@@ -28,6 +27,6 @@ const TransactionQuery = `
 				u.saldo = u.saldo + t.valor
 	)
 
-	SET u._LOCK_ = false
+	REMOVE u._LOCK_
 
 	RETURN u.saldo AS saldo, u.limite AS limite, t as transacao`
