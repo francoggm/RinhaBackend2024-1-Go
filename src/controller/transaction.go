@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"context"
 	"crebito/database"
 	"crebito/models"
 	"encoding/json"
@@ -9,16 +8,16 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 func HandleTransaction(w http.ResponseWriter, r *http.Request, s neo4j.SessionWithContext) {
 	defer r.Body.Close()
 
-	vars := mux.Vars(r)
+	idParam := chi.URLParam(r, "id")
 
-	id, err := strconv.Atoi(vars["id"])
+	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -45,37 +44,7 @@ func HandleTransaction(w http.ResponseWriter, r *http.Request, s neo4j.SessionWi
 		req.Value = -1 * req.Value
 	}
 
-	ctx := context.Background()
-
-	result, err := s.ExecuteWrite(ctx,
-		func(tx neo4j.ManagedTransaction) (any, error) {
-			result, err := tx.Run(ctx, database.TransactionQuery,
-				map[string]any{
-					"id":        id,
-					"tipo":      req.Type,
-					"valor":     req.Value,
-					"descricao": req.Description,
-				})
-			if err != nil {
-				return nil, err
-			}
-
-			record, err := result.Single(ctx)
-			if err != nil {
-				return nil, models.ErrUserNotFound
-			}
-
-			if record.AsMap()["transacao"] == nil {
-				return nil, models.ErrInsufficientLimit
-			}
-
-			var res models.TransactionResponse
-
-			res.Balance = record.AsMap()["saldo"].(int64)
-			res.Limit = record.AsMap()["limite"].(int64)
-
-			return res, nil
-		})
+	result, err := database.ExecuteTransaction(s, id, req)
 
 	if err != nil {
 		switch {
@@ -89,6 +58,8 @@ func HandleTransaction(w http.ResponseWriter, r *http.Request, s neo4j.SessionWi
 	}
 
 	res, _ := json.Marshal(result)
+
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(res)
 }

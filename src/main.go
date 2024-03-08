@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
@@ -45,15 +45,15 @@ func main() {
 	})
 	defer ts.Close(ctx)
 
-	m := mux.NewRouter()
+	m := chi.NewMux()
 
-	m.HandleFunc("/clientes/{id}/extrato", func(w http.ResponseWriter, r *http.Request) {
+	m.Get("/clientes/{id}/extrato", func(w http.ResponseWriter, r *http.Request) {
 		controller.HandleExtract(w, r, exs)
-	}).Methods("GET")
+	})
 
-	m.HandleFunc("/clientes/{id}/transacoes", func(w http.ResponseWriter, r *http.Request) {
+	m.Post("/clientes/{id}/transacoes", func(w http.ResponseWriter, r *http.Request) {
 		controller.HandleTransaction(w, r, ts)
-	}).Methods("POST")
+	})
 
 	if err := http.ListenAndServe("0.0.0.0:"+cfg.Port, m); err != nil {
 		log.Panicf("Error starting server : error=%v", err)

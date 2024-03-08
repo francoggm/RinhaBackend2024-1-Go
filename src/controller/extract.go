@@ -1,25 +1,23 @@
 package controller
 
 import (
-	"context"
 	"crebito/database"
 	"crebito/models"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 func HandleExtract(w http.ResponseWriter, r *http.Request, s neo4j.SessionWithContext) {
 	defer r.Body.Close()
 
-	vars := mux.Vars(r)
+	idParam := chi.URLParam(r, "id")
 
-	id, err := strconv.Atoi(vars["id"])
+	id, err := strconv.Atoi(idParam)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -30,47 +28,7 @@ func HandleExtract(w http.ResponseWriter, r *http.Request, s neo4j.SessionWithCo
 		return
 	}
 
-	c := context.Background()
-
-	result, err := s.ExecuteRead(c,
-		func(tx neo4j.ManagedTransaction) (any, error) {
-			result, err := tx.Run(c, database.ExtractQuery,
-				map[string]any{
-					"id": id,
-				})
-			if err != nil {
-				return nil, err
-			}
-
-			record, err := result.Single(c)
-			if err != nil {
-				return nil, models.ErrUserNotFound
-			}
-
-			var res models.ExtractResponse
-
-			res.UserInfo.Balance = record.AsMap()["saldo"].(int64)
-			res.UserInfo.Limit = record.AsMap()["limite"].(int64)
-			res.UserInfo.Date = time.Now()
-
-			values := record.AsMap()["transacoes"].([]any)
-			for _, v := range values {
-				var t models.Transaction
-
-				transaction := v.(map[string]any)
-
-				t.Value = transaction["valor"].(int64)
-				t.Type = transaction["tipo"].(string)
-				t.Description = transaction["descricao"].(string)
-
-				date := transaction["data"].(int64)
-				t.Date = time.UnixMilli(date)
-
-				res.Transactions = append(res.Transactions, t)
-			}
-
-			return res, nil
-		})
+	result, err := database.GetExtract(s, id)
 
 	if err != nil {
 		switch {
