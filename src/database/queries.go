@@ -4,6 +4,8 @@ const ExtractQuery = `
 	MATCH (u:Usuario {id: $id})
 	OPTIONAL MATCH (u)-[:REALIZOU]->(t)
 
+	SET u._LOCK_ = true
+
 	WITH u, t
 	ORDER BY t.data DESC LIMIT 10
 
@@ -14,6 +16,8 @@ const ExtractQuery = `
 					ELSE
 							NULL
 			END as ts
+
+	REMOVE u._LOCK_
 
 	RETURN u.saldo AS saldo, u.limite AS limite, collect(ts) AS transacoes`
 

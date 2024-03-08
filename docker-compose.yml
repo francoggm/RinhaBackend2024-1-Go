@@ -13,6 +13,11 @@ services:
       - MODE=debug
       - PORT=8080
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.35"
+          memory: "45MB"
 
   api02:
     <<: *api
@@ -29,6 +34,15 @@ services:
     restart: on-failure
     environment:
       - NEO4J_AUTH=neo4j/password
+      - NEO4J_db_lock_acquisition_timeout=30
+      - NEO4J_db_relationship__grouping__threshold=500
+      - NEO4J_server_bolt_thread__pool__max__size = 1000
+      - NEO4J_server_bolt_thread__pool__min__size = 900
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: "0.55"
+    #       memory: "420MB"
   
   nginx:
     image: nginx:latest
@@ -39,6 +53,11 @@ services:
       - api02
     ports:
       - "9999:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "40MB"
   
 volumes:
   neo4j_data:

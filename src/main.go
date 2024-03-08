@@ -35,13 +35,13 @@ func main() {
 
 	exs := driver.NewSession(ctx, neo4j.SessionConfig{
 		DatabaseName: "neo4j",
-		AccessMode:   neo4j.AccessModeRead,
+		AccessMode:   neo4j.AccessModeWrite,
 	})
 	defer exs.Close(ctx)
 
 	ts := driver.NewSession(ctx, neo4j.SessionConfig{
 		DatabaseName: "neo4j",
-		AccessMode:   neo4j.AccessModeRead,
+		AccessMode:   neo4j.AccessModeWrite,
 	})
 	defer ts.Close(ctx)
 
