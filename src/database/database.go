@@ -8,6 +8,15 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
+func CreateUsers(s neo4j.SessionWithContext) {
+	ctx := context.Background()
+
+	s.ExecuteWrite(context.Background(), func(tx neo4j.ManagedTransaction) (any, error) {
+		tx.Run(ctx, CreateUsersQuery, map[string]any{})
+		return nil, nil
+	})
+}
+
 func GetExtract(s neo4j.SessionWithContext, id int) (any, error) {
 	ctx := context.Background()
 

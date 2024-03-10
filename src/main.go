@@ -4,6 +4,7 @@ import (
 	"context"
 	"crebito/config"
 	"crebito/controller"
+	"crebito/database"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,7 +36,7 @@ func main() {
 
 	exs := driver.NewSession(ctx, neo4j.SessionConfig{
 		DatabaseName: "neo4j",
-		AccessMode:   neo4j.AccessModeWrite,
+		AccessMode:   neo4j.AccessModeRead,
 	})
 	defer exs.Close(ctx)
 
@@ -44,6 +45,8 @@ func main() {
 		AccessMode:   neo4j.AccessModeWrite,
 	})
 	defer ts.Close(ctx)
+
+	database.CreateUsers(ts)
 
 	m := chi.NewMux()
 

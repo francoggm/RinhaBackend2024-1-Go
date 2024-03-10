@@ -10,7 +10,6 @@ services:
       - neo
     environment:
       - DB_HOSTNAME=neo
-      - MODE=debug
       - PORT=8080
     restart: always
     deploy:
@@ -29,15 +28,15 @@ services:
     ports: 
       - 7474:7474
       - 7687:7687
-    volumes:
-      - ./neo4j_data:/data/
     restart: on-failure
+    volumes:
+      - ./db_init:/var/lib/neo4j/db_init/
     environment:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_db_lock_acquisition_timeout=30
-      - NEO4J_db_relationship__grouping__threshold=500
-      - NEO4J_server_bolt_thread__pool__max__size = 1000
-      - NEO4J_server_bolt_thread__pool__min__size = 900
+      - NEO4J_db_relationship__grouping__threshold=10000
+      - NEO4J_server_bolt_thread__pool__max__size=5000
+      - NEO4J_server_bolt_thread__pool__min__size=4000
     # deploy:
     #   resources:
     #     limits:
@@ -58,6 +57,7 @@ services:
         limits:
           cpus: "0.25"
           memory: "40MB"
-  
-volumes:
-  neo4j_data:
+
+networks:
+  default:
+    driver: bridge

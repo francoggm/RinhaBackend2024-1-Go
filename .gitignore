@@ -1,4 +1,4 @@
 .env
 tmp
-*.txt
 neo4j_data
+bin
